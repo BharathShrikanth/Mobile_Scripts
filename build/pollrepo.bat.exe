@@ -1,0 +1,62 @@
+@echo off
+SET project=%1
+SET to=%2
+SET subject=%3-Nil-code-change-alert
+SET branch=%4
+cd %project%
+git rev-parse HEAD>%WORKSPACE%\previous_commit.txt
+set /p old=<%WORKSPACE%\previous_commit.txt
+echo pullhash=%old%>%WORKSPACE%\previous_commit.txt
+git reset --hard HEAD
+git reset --hard %branch%
+git clean -f -d
+git pull --prune
+git rev-parse HEAD>%WORKSPACE%\current_commit.txt
+set /p update=<%WORKSPACE%\current_commit.txt
+echo pullhash=%update%>%WORKSPACE%\current_commit.txt
+fc %WORKSPACE%\current_commit.txt %WORKSPACE%\previous_commit.txt
+IF %ERRORLEVEL%==0 (
+cd %WORKSPACE%
+setLocal enableDELAYedeXpansioN
+IF NOT EXIST pollcount (
+	echo 0 >pollcount
+	)
+:main
+for /f "tokens=* delims= " %%a in (pollcount) do ( set x=%%a )
+set/a X+=1
+if !x! gtr 5 (
+	echo !x!
+	set N=0
+	set TIMESTAMP=%TIME:~0,2%
+	IF !TIMESTAMP! EQU 8 (
+	echo Resetting the Pollcount
+	goto reset
+	)
+	SET MYDAY=%DATE:~0,3%
+	set /a diffhour=24-!TIMESTAMP!
+	IF !diffhour! GEQ 4 (
+		IF !diffhour! LEQ 12 (
+			IF !MYDAY! NEQ Sat (
+				IF !MYDAY! NEQ Sun (
+					echo Its HSC working hours....
+					curl -X POST http://re86:a25e9830c23dd609fc37dd8b58739bc9@192.168.2.100:8001/view/All/job/SendMail/buildWithParameters?subject=%subject%^&to=%to%
+				)
+			)
+		)
+	)  
+	goto reset 
+)
+set N=!x!
+:reset
+> pollcount echo.!N!
+EXIT /B 1
+) ELSE (
+cd %project%
+git log --pretty=format:"%%cn committed %%h on %%cd msg %%B" %old%..%update%>%WORKSPACE%\changes.txt
+echo This file opens properly with TextEditor.>%WORKSPACE%\changesetfiles.txt
+echo Each line start with an alphabet signifying the last action done on the file.>>%WORKSPACE%\changesetfiles.txt
+echo [A - Added ][D - Deleted][M - Modified]>>%WORKSPACE%\changesetfiles.txt
+git diff --name-status %old% %update%>>%WORKSPACE%\changesetfiles.txt
+echo 0 >pollcount
+EXIT /B 0
+)

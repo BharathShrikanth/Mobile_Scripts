@@ -1,0 +1,5 @@
+::Bump the sonar properties version.
+@ECHO OFF
+FOR /F "eol=; tokens=2,2 delims==" %%i IN ('findstr /i "sonar.projectVersion" %2') DO set version=%%i
+set "bumped=%version%-build%1"
+sed -i -e s/%version%/%bumped%/g %2

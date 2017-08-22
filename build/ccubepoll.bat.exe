@@ -1,0 +1,35 @@
+@echo off
+SETLOCAL EnableDelayedExpansion
+SET WORKSPACE=D:\jenkins-slave\workspace\CCube-CI-0-Poll
+SET /A ARGS_COUNT=0    
+FOR %%A in (%*) DO (
+SET /A ARGS_COUNT+=1
+SET project%ARGS_COUNT%=%%A
+echo %%A
+ECHO !ARGS_COUNT!
+cd %%A
+git rev-parse HEAD>%WORKSPACE%\previous_commit.txt
+set /p old=<%WORKSPACE%\previous_commit.txt
+echo pullhash!ARGS_COUNT!=!old!>%WORKSPACE%\previous_commit.txt
+git reset --hard HEAD
+git reset --hard origin/develop
+git clean -f -d
+git pull --prune
+git rev-parse HEAD>%WORKSPACE%\current_commit.txt
+set /p update=<%WORKSPACE%\current_commit.txt
+echo pullhash!ARGS_COUNT!=!update!>%WORKSPACE%\current_commit.txt
+fc %WORKSPACE%\current_commit.txt %WORKSPACE%\previous_commit.txt
+IF !ERRORLEVEL!==0 (
+echo There is no code change in the repo [%%A]
+) ELSE (
+echo %%A>>%WORKSPACE%\repochanges.txt
+)
+echo [Commit changes for - %%A]>>%WORKSPACE%\changes.txt
+git log --pretty=format:"%%cn committed %%h on %%cd msg %%B" !old!..!update!>>%WORKSPACE%\changes.txt
+echo [File changes for - %%A]>>%WORKSPACE%\changesetfiles.txt
+git diff --name-status !old! !update!>>%WORKSPACE%\changesetfiles.txt
+)
+cd %WORKSPACE%
+IF NOT EXIST repochanges.txt (
+	EXIT /B 1
+	)

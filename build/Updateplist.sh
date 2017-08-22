@@ -1,0 +1,1 @@
+$myBundle=awk -F "[><]" '/string/{print $3}' info.plist | grep com.tesco

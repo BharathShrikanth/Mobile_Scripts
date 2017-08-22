@@ -1,0 +1,24 @@
+SET project=%1
+SET branch=%2
+cd %project%
+git rev-parse HEAD>%WORKSPACE%\previous_commit.txt
+set /p old=<%WORKSPACE%\previous_commit.txt
+echo pullhash=%old%>%WORKSPACE%\previous_commit.txt
+git reset --hard HEAD
+git reset --hard %branch%
+git clean -f -d
+git pull --prune
+git rev-parse HEAD>%WORKSPACE%\current_commit.txt
+set /p update=<%WORKSPACE%\current_commit.txt
+echo pullhash=%update%>%WORKSPACE%\current_commit.txt
+fc %WORKSPACE%\current_commit.txt %WORKSPACE%\previous_commit.txt
+IF %ERRORLEVEL%==0 (
+EXIT /B 1
+) ELSE (
+git log --pretty=format:"%%cn committed %%h on %%cd msg %%B" %old%..%update%>%WORKSPACE%\changes.txt
+echo This file opens properly with TextEditor.>%WORKSPACE%\changesetfiles.txt
+echo Each line start with an alphabet signifying the last action done on the file.>>%WORKSPACE%\changesetfiles.txt
+echo [A - Added ][D - Deleted][M - Modified]>>%WORKSPACE%\changesetfiles.txt
+git diff --name-status %old% %update%>>%WORKSPACE%\changesetfiles.txt
+EXIT /B 0
+)

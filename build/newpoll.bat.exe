@@ -1,0 +1,40 @@
+SET project=%1
+SET branch=%2
+cd %project%
+IF [%2]==[] goto NOMODIFY
+echo %branch%>%WORKSPACE%\new_branch
+git rev-parse --abbrev-ref HEAD>%WORKSPACE%\current_branch
+fc %WORKSPACE%\new_branch %WORKSPACE%\current_branch
+IF %ERRORLEVEL%==0 (
+	goto NOMODIFY 
+) ELSE (
+	goto MODIFY
+)
+
+:MODIFY
+git checkout %branch%
+echo Branch switched to %branch% 
+git rev-parse HEAD>%WORKSPACE%\current_hash
+set /p old=<%WORKSPACE%\current_hash
+echo pullhash=%old%>%WORKSPACE%\current_hash
+git pull --prune
+git rev-parse HEAD>%WORKSPACE%\new_hash
+set /p update=<%WORKSPACE%\new_hash
+echo pullhash=%update%>%WORKSPACE%\new_hash
+fc %WORKSPACE%\new_hash %WORKSPACE%\current_hash
+EXIT /B 0
+
+:NOMODIFY
+git rev-parse HEAD>%WORKSPACE%\current_hash
+set /p old=<%WORKSPACE%\current_hash
+echo pullhash=%old%>%WORKSPACE%\current_hash
+git pull --prune
+git rev-parse HEAD>%WORKSPACE%\new_hash
+set /p update=<%WORKSPACE%\new_hash
+echo pullhash=%update%>%WORKSPACE%\new_hash
+fc %WORKSPACE%\new_hash %WORKSPACE%\current_hash
+IF %ERRORLEVEL%==0 (
+EXIT /B 1
+) ELSE (
+EXIT /B 0
+)
